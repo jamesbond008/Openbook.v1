@@ -15,6 +15,17 @@ View your app in AI Studio: https://ai.studio/apps/14eb184d-8683-44d8-975e-580f0
 
 1. Install dependencies:
    `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+2. Set the following values in `.env.local`:
+   - `GEMINI_API_KEY`
+   - `BOOKMIND_STORAGE_MODE` (`ima` / `local` / `notion`)
+   - `NOTION_TOKEN`
+   - `NOTION_DATABASE_ID`
+   - `IMA_OPENAPI_CLIENTID`
+   - `IMA_OPENAPI_APIKEY`
+   - `IMA_KNOWLEDGE_BASE_ID`
+   - `IMA_KNOWLEDGE_BASE_NAME`
+3. Run the full app with Notion sync:
+   `npm run dev:full`
+
+If you only need the frontend, you can still run:
+`npm run dev`
