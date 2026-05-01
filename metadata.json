@@ -1,5 +1,5 @@
 {
-  "name": "BookMind - 极速书籍核心拆解",
-  "description": "输入书名，即刻获取高密度、专业级的书籍核心思想与交互式内容策划方案。",
+  "name": "James Reading OS",
+  "description": "输入一本书，生成可复用的 AI-native 阅读资产、NotebookLM 素材、Gemini 深聊问题和知识库沉淀记录。",
   "requestFramePermissions": []
 }

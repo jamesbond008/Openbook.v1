@@ -75,6 +75,17 @@ interface BookData {
     remember: string[];
     practicalUse: string;
   };
+  feynmanExplanation: {
+    authorContext: string[];
+    explanationAngles: {
+      title: string;
+      explanation: string;
+    }[];
+    oneSentenceSummary: string;
+    plainLanguage?: string;
+    analogy?: string;
+    teachBack?: string[];
+  };
   readingPipeline: {
     coreQuestion: string;
     keyModels: string[];
@@ -212,6 +223,76 @@ const STATUS_RANK: Record<ReadingPipelineRecord['status'], number> = {
   '可入库': 2,
 };
 
+function createFallbackFeynmanExplanation(title: string): BookData['feynmanExplanation'] {
+  const normalizedTitle = title.trim() || '这本书';
+
+  return {
+    authorContext: [
+      `《${normalizedTitle}》需要放回作者的问题意识里理解：作者不是凭空写作，而是在回应自己所处时代里某个真实的困惑、冲突或低效做法。`,
+      '读这本书时，先不要急着背结论，而要先问：作者看见了什么问题，为什么他觉得原来的解释不够好。',
+    ],
+    explanationAngles: [
+      {
+        title: '这本书到底在解决什么问题',
+        explanation: `用大白话讲，《${normalizedTitle}》想帮你把一个原本模糊的问题看清楚：哪些判断是错的，哪些做法只是习惯，哪些地方可以换一种思路。`,
+      },
+      {
+        title: '它为什么不是普通总结',
+        explanation: '这本书真正有价值的地方，不是多给你一些信息，而是提供一套能反复调用的观察方式，让你在现实问题里也能重新判断。',
+      },
+      {
+        title: '读完后跟你有什么关系',
+        explanation: '如果你能把书里的核心观点讲给别人听，并能说明它适合用在哪些场景、不适合用在哪些场景，这本书才算真的被你吸收。',
+      },
+    ],
+    oneSentenceSummary: `作者写《${normalizedTitle}》是想告诉你：真正重要的不是记住书里的每个细节，而是把它变成一种能解释问题、指导行动的思考方式。`,
+  };
+}
+
+function normalizeFeynmanExplanation(
+  value: Partial<BookData['feynmanExplanation']> | undefined,
+  title: string,
+): BookData['feynmanExplanation'] {
+  const fallback = createFallbackFeynmanExplanation(title);
+  const legacyTeachBack = value?.teachBack || [];
+  const legacyAngles = [
+    value?.plainLanguage
+      ? {
+          title: '这本书到底在讲什么',
+          explanation: value.plainLanguage,
+        }
+      : null,
+    value?.analogy
+      ? {
+          title: '可以怎样类比理解',
+          explanation: value.analogy,
+        }
+      : null,
+    legacyTeachBack.length
+      ? {
+          title: '讲给别人听时要抓住什么',
+          explanation: legacyTeachBack.join(' '),
+        }
+      : null,
+  ].filter(Boolean) as BookData['feynmanExplanation']['explanationAngles'];
+
+  return {
+    authorContext:
+      value?.authorContext?.length
+        ? value.authorContext
+        : fallback.authorContext,
+    explanationAngles:
+      value?.explanationAngles?.length
+        ? value.explanationAngles
+        : legacyAngles.length
+          ? legacyAngles
+          : fallback.explanationAngles,
+    oneSentenceSummary:
+      value?.oneSentenceSummary ||
+      fallback.oneSentenceSummary,
+  };
+}
+
 function createFallbackReadingPipeline(title: string): BookData['readingPipeline'] {
   const normalizedTitle = title.trim() || '这本书';
 
@@ -324,6 +405,26 @@ tags: [${tags.map((tag) => `"${tag}"`).join(', ')}]
 - 记住 2
 - 记住 3
 
+## 费曼学习解释
+
+### 作者和时代背景
+- 这本书需要放回作者的问题意识里理解：作者不是凭空写作，而是在回应自己所处时代里某个真实的阅读、学习或知识管理问题。
+- 它回应的是一个很现实的困境：信息越来越多，但真正能被复用、能改变判断和行动的知识并没有同步变多。
+
+### 用大白话讲给一个没读过这本书的朋友听
+
+#### 它到底想解决什么
+这本书可以被理解成一套把阅读内容转成可复用知识资产的方法，不是为了让你多存几篇笔记，而是为了让知识以后还能被找回、讲清和调用。
+
+#### 为什么普通摘抄不够
+普通摘抄像把东西堆进抽屉，短期看起来很多，长期很难使用；真正有效的拆书要把观点变成问题、模型、案例和行动。
+
+#### 跟你有什么关系
+如果你能把一本书讲给另一个人听，并且能说清它适合解决什么问题，这本书才算从信息变成了你的工具。
+
+### 一句话总结
+**作者写这本书是想告诉你：阅读的终点不是保存内容，而是把内容变成能解释问题、指导行动、还能讲给别人听的知识资产。**
+
 ## 关联知识
 
 - [[${moc}]]
@@ -375,12 +476,13 @@ tags: [${tags.map((tag) => `"${tag}"`).join(', ')}]
     ],
     conclusions: {
       remember: [
-        'BookMind 现在不只生成书籍拆解，也能生成适合知识库落地的笔记。',
+        'James Reading OS 现在不只生成书籍拆解，也能生成适合知识库落地的笔记。',
         'Obsidian Pipeline 的关键思想是：解读之后要继续提炼、索引和复用。',
         '最自然的接法是前端直接输出 Vault 友好的结构，而不是只停留在展示层。',
       ],
       practicalUse: '配置 GEMINI_API_KEY 后，输入任意书名即可得到网页内容 + Obsidian Markdown，一键复制或下载进入你的 vault。',
     },
+    feynmanExplanation: normalizeFeynmanExplanation(undefined, normalizedTitle),
     readingPipeline: createFallbackReadingPipeline(normalizedTitle),
     displaySuggestions:
       '在页面里把“网页阅读结果”和“知识库沉淀结果”并排展示最合适：上半部分负责快速理解，下半部分负责导出与长期复用。',
@@ -434,7 +536,7 @@ function createPipelineRecordFromBook(book: BookData): ReadingPipelineRecord {
     field: book.positioning.field,
     status: '可入库',
     stage: 'Vault',
-    source: 'BookMind',
+    source: 'James Reading OS',
     lastReviewedAt: book.timestamp,
     moc: book.obsidianPipeline.vaultPlacement.moc,
     filename: book.obsidianPipeline.vaultPlacement.filename,
@@ -557,6 +659,7 @@ export default function App() {
   const [storageLabel, setStorageLabel] = useState('本地数据库');
   const [historyLoading, setHistoryLoading] = useState(true);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [copiedContentId, setCopiedContentId] = useState<string | null>(null);
 
   const parseStorageMode = (value: unknown): 'local' | 'notion' | 'ima' => {
     if (value === 'notion' || value === 'ima') return value;
@@ -565,6 +668,8 @@ export default function App() {
 
   const normalizeHistoryBook = (item: BookData): BookData => ({
     ...item,
+    feynmanExplanation:
+      normalizeFeynmanExplanation(item.feynmanExplanation, item.positioning?.title || '这本书'),
     readingPipeline:
       item.readingPipeline ?? createFallbackReadingPipeline(item.positioning?.title || '这本书'),
   });
@@ -687,9 +792,93 @@ export default function App() {
   const copyToClipboard = async (text: string) => {
     try {
       await navigator.clipboard.writeText(text);
+      return true;
     } catch (e) {
       console.error('Failed to copy text', e);
+      return false;
     }
+  };
+
+  const buildDisplayCopyContent = (book: BookData) => {
+    return [
+      `# ${book.positioning.title}`,
+      '',
+      '## 一、书籍定位',
+      '',
+      `- 书名：${book.positioning.title}`,
+      `- 作者：${book.positioning.author}`,
+      `- 领域：${book.positioning.field}`,
+      `- 一句话：${book.positioning.oneLiner}`,
+      '',
+      '## 二、核心命题',
+      '',
+      `### ${book.coreProposition.mainTitle}`,
+      '',
+      ...book.coreProposition.explanation.map((item) => `- ${item}`),
+      '',
+      '## 三、主题模块',
+      ...book.modules.flatMap((module) => [
+        '',
+        `### ${module.title}`,
+        ...module.cards.map((card) => `- ${card}`),
+      ]),
+      '',
+      '## 四、读书流水线拆书',
+      '',
+      '### 这本书真正回答的问题',
+      '',
+      book.readingPipeline.coreQuestion,
+      '',
+      '### 行动清单',
+      ...book.readingPipeline.actionChecklist.map((item, index) => `${index + 1}. ${item}`),
+      '',
+      '### 关键模型',
+      ...book.readingPipeline.keyModels.map((item) => `- ${item}`),
+      '',
+      '### 代表性案例',
+      ...book.readingPipeline.keyCases.map((item) => `- ${item}`),
+      '',
+      '### 迁移场景',
+      ...book.readingPipeline.transferScenarios.map((item) => `- ${item}`),
+      '',
+      '### Alpha 笔记',
+      ...book.readingPipeline.alphaNotes.map((item) => `- ${item}`),
+      '',
+      '## 五、阅读后可直接带走的结论',
+      '',
+      '### 最值得记住的内容',
+      ...book.conclusions.remember.map((item) => `- ${item}`),
+      '',
+      '### 现实中如何应用',
+      '',
+      book.conclusions.practicalUse,
+      '',
+      '## 六、费曼学习解释',
+      '',
+      '### 作者和时代背景',
+      ...book.feynmanExplanation.authorContext.map((item) => `- ${item}`),
+      '',
+      '### 用大白话讲给一个没读过这本书的朋友听',
+      ...book.feynmanExplanation.explanationAngles.flatMap((angle) => [
+        '',
+        `#### ${angle.title}`,
+        angle.explanation,
+      ]),
+      '',
+      '### 一句话总结',
+      '',
+      `**${book.feynmanExplanation.oneSentenceSummary}**`,
+    ].join('\n');
+  };
+
+  const copyBookContent = async (book: BookData) => {
+    const didCopy = await copyToClipboard(buildDisplayCopyContent(book));
+    if (!didCopy) return;
+
+    setCopiedContentId(book.id);
+    window.setTimeout(() => {
+      setCopiedContentId((currentId) => (currentId === book.id ? null : currentId));
+    }, 1600);
   };
 
   const downloadMarkdown = (book: BookData) => {
@@ -896,6 +1085,27 @@ export default function App() {
     "remember": ["总结1", "总结2", "总结3"],
     "practicalUse": "现实里可以怎么用"
   },
+  "feynmanExplanation": {
+    "authorContext": [
+      "作者是谁、处在什么时代或专业背景里，为什么会写这本书",
+      "这本书回应了什么现实问题、思想潮流或旧解释的不足"
+    ],
+    "explanationAngles": [
+      {
+        "title": "角度 1 的小标题，直接点出关键词",
+        "explanation": "用大白话讲清楚这个角度"
+      },
+      {
+        "title": "角度 2 的小标题，直接点出关键词",
+        "explanation": "用大白话讲清楚这个角度"
+      },
+      {
+        "title": "角度 3 的小标题，直接点出关键词",
+        "explanation": "用大白话讲清楚这个角度"
+      }
+    ],
+    "oneSentenceSummary": "用一句加粗收尾式总结，把本书核心主张和对读者的意义焊在一起"
+  },
   "readingPipeline": {
     "coreQuestion": "这本书真正回答的核心问题",
     "keyModels": ["关键模型1", "关键模型2", "关键模型3"],
@@ -938,10 +1148,18 @@ export default function App() {
 - actionChecklist 写成可以立即执行的动作，不要写成抽象口号。
 - alphaNotes 要像可直接放进知识库的短笔记，简洁但有判断力。
 
+费曼学习解释要求：
+- 这部分的目标不是再总结一遍，而是形成一个“能用费曼解释讲给另一个人听”的内容范式。
+- authorContext 写 1 到 2 段，说明作者是谁、什么背景、为什么会在那个时间点写这本书、这本书是对什么现实问题或思想潮流的回应。让读者明白作者不是凭空写作，而是带着自己的问题意识。
+- explanationAngles 设计 3 到 5 个最可能被外行追问的角度，直接用小标题点出每个角度的关键词，然后用大白话讲清楚。不要写“朋友问”这种对话格式，就是连续的小节式讲解。
+- 角度要随书的主题变化，不要套用固定模板。哲学/思想类可讲“它反对什么、论证从哪一步开始”；方法论/工具类可讲“怎么用、用错了会怎样”；历史/社会科学类可讲“为什么是 A 不是 B、不同地区/时代的对比”；心理学/认知类可讲“跟日常直觉哪里不一样、机制是什么”；商业/管理类可讲“小规模适用吗、跟其他理论冲突吗”。
+- explanationAngles 之间要有递进感：先讲“是什么”，再讲“为什么”，最后落到“跟读者有什么关系”。
+- oneSentenceSummary 用一句有力量的话收尾，句式可参考：“作者写这本书是想告诉你：XXX，这个道理对 A 成立，对 B 也成立”。
+
 Markdown 笔记要求：
 - 包含 frontmatter
 - frontmatter 至少包含 title、author、type、field、tags
-- 正文里包含“核心命题 / 读书流水线拆书 / 主题模块 / 阅读后可直接带走的结论 / 关联知识”
+- 正文里包含“核心命题 / 读书流水线拆书 / 主题模块 / 阅读后可直接带走的结论 / 费曼学习解释 / 关联知识”
 - 关联知识里请使用 Obsidian 风格双向链接，例如 [[MOC-Investing]]
 - 不要输出占位符，要输出可直接保存的完整内容`,
         config: {
@@ -986,6 +1204,25 @@ Markdown 笔记要求：
                 },
                 required: ["remember", "practicalUse"]
               },
+              feynmanExplanation: {
+                type: Type.OBJECT,
+                properties: {
+                  authorContext: { type: Type.ARRAY, items: { type: Type.STRING } },
+                  explanationAngles: {
+                    type: Type.ARRAY,
+                    items: {
+                      type: Type.OBJECT,
+                      properties: {
+                        title: { type: Type.STRING },
+                        explanation: { type: Type.STRING }
+                      },
+                      required: ["title", "explanation"]
+                    }
+                  },
+                  oneSentenceSummary: { type: Type.STRING }
+                },
+                required: ["authorContext", "explanationAngles", "oneSentenceSummary"]
+              },
               readingPipeline: {
                 type: Type.OBJECT,
                 properties: {
@@ -1029,7 +1266,7 @@ Markdown 笔记要求：
                 required: ["vaultPlacement", "evergreenCandidates", "noteMarkdown"]
               }
             },
-            required: ["positioning", "coreProposition", "modules", "conclusions", "readingPipeline", "displaySuggestions", "obsidianPipeline"]
+            required: ["positioning", "coreProposition", "modules", "conclusions", "feynmanExplanation", "readingPipeline", "displaySuggestions", "obsidianPipeline"]
           }
         }
       });
@@ -1037,6 +1274,8 @@ Markdown 笔记要求：
       const rawData = JSON.parse(response.text || '{}');
       const newBook: BookData = {
         ...rawData,
+        feynmanExplanation:
+          normalizeFeynmanExplanation(rawData.feynmanExplanation, rawData.positioning?.title || bookTitle),
         readingPipeline:
           rawData.readingPipeline ??
           createFallbackReadingPipeline(rawData.positioning?.title || bookTitle),
@@ -1091,7 +1330,8 @@ Markdown 笔记要求：
   const vaultReadyCount = readingDatabase.filter((item) => item.stage === 'Vault').length;
 
   return (
-    <div className="min-h-screen bg-[#F9FAFB] text-[#111827] font-sans selection:bg-blue-100 flex">
+    <div className="bookmind-shell min-h-screen text-[var(--ink)] selection:bg-[#d9fbe9] selection:text-[#161514] flex">
+      <div className="page-backdrop" aria-hidden="true" />
       {/* Sidebar / Directory */}
       <AnimatePresence>
         {isSidebarOpen && (
@@ -1107,16 +1347,16 @@ Markdown 笔记要求：
               initial={{ x: -300 }}
               animate={{ x: 0 }}
               exit={{ x: -300 }}
-              className="fixed inset-y-0 left-0 w-72 bg-white border-r border-gray-100 z-[70] shadow-2xl lg:shadow-none lg:relative lg:flex flex-col"
+              className="glass-sidebar fixed inset-y-0 left-0 w-72 z-[70] shadow-2xl lg:shadow-none lg:relative lg:flex flex-col"
             >
-              <div className="p-6 border-b border-gray-50 flex items-center justify-between">
-                <h2 className="font-bold text-gray-900 flex items-center gap-2">
-                  <BookOpen className="w-4 h-4 text-blue-600" />
+              <div className="p-6 border-b border-[var(--line)] flex items-center justify-between">
+                <h2 className="font-bold text-[var(--ink)] flex items-center gap-2">
+                  <BookOpen className="w-4 h-4 text-[var(--blue)]" />
                   已拆解目录
                 </h2>
                 <button 
                   onClick={() => setIsSidebarOpen(false)}
-                  className="lg:hidden p-1 hover:bg-gray-100 rounded-md"
+                  className="lg:hidden p-1 hover:bg-black/5 rounded-md"
                 >
                   <ArrowRight className="w-4 h-4 rotate-180" />
                 </button>
@@ -1137,13 +1377,13 @@ Markdown 笔记要求：
                       key={item.id}
                       onClick={() => selectFromHistory(item)}
                       className={cn(
-                        "w-full text-left p-3 rounded-xl transition-all group",
-                        result?.id === item.id 
-                          ? "bg-blue-50 text-blue-700 border border-blue-100" 
-                          : "hover:bg-gray-50 text-gray-600 border border-transparent"
+                        "w-full text-left p-3 rounded-2xl transition-all group",
+                        result?.id === item.id
+                          ? "bg-[var(--blue-soft)] text-[var(--blue)] border border-[#cfe3ff]"
+                          : "hover:bg-white/70 text-[var(--muted)] border border-transparent"
                       )}
                     >
-                      <div className="font-semibold text-sm truncate mb-1 group-hover:text-blue-600">
+                      <div className="font-semibold text-sm truncate mb-1 group-hover:text-[var(--blue)]">
                         {item.positioning.title}
                       </div>
                       <div className="text-[10px] opacity-60 flex justify-between items-center">
@@ -1156,10 +1396,10 @@ Markdown 笔记要求：
               </div>
 
               {history.length > 0 && (
-                <div className="p-4 border-t border-gray-50">
+                <div className="p-4 border-t border-[var(--line)]">
                   <button 
                     onClick={clearHistory}
-                    className="w-full py-2 text-xs text-red-500 hover:bg-red-50 rounded-lg transition-colors font-medium"
+                    className="w-full py-2 text-xs text-red-500 hover:bg-red-50 rounded-xl transition-colors font-medium"
                   >
                     清空历史目录
                   </button>
@@ -1172,51 +1412,56 @@ Markdown 笔记要求：
 
       <div className="flex-1 min-w-0">
         {/* Header */}
-        <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-gray-100">
-          <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
+        <header className="topbar-glass sticky top-0 z-50">
+          <div className="max-w-7xl mx-auto px-4 h-[72px] flex items-center justify-between">
             <div className="flex items-center gap-4">
               <button 
                 onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-                className="p-2 hover:bg-gray-100 rounded-xl transition-colors relative"
+                className="p-2 hover:bg-black/5 rounded-2xl transition-colors relative"
               >
-                <Layout className="w-5 h-5 text-gray-600" />
+                <Layout className="w-5 h-5 text-[var(--muted)]" />
                 {history.length > 0 && !isSidebarOpen && (
-                  <span className="absolute top-1 right-1 w-2 h-2 bg-blue-600 rounded-full border-2 border-white" />
+                  <span className="absolute top-1 right-1 w-2 h-2 bg-[var(--brand)] rounded-full border-2 border-white" />
                 )}
               </button>
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
+                <div className="w-9 h-9 bg-[var(--ink)] rounded-2xl flex items-center justify-center shadow-[0_8px_18px_rgba(31,29,26,0.12)]">
                   <BookMarked className="text-white w-5 h-5" />
                 </div>
-                <span className="font-bold text-xl tracking-tight">BookMind</span>
+                <div>
+                  <div className="mono-label text-[var(--muted-soft)]">AI-Native Reading OS</div>
+                  <span className="font-semibold text-lg tracking-tight">James Reading OS</span>
+                </div>
               </div>
             </div>
-            <div className="hidden md:flex items-center gap-6 text-sm font-medium text-gray-500">
-              <a href="#" className="hover:text-blue-600 transition-colors">书籍定位</a>
-              <a href="#" className="hover:text-blue-600 transition-colors">核心命题</a>
-              <a href="#" className="hover:text-blue-600 transition-colors">主题模块</a>
-              <a href="#" className="hover:text-blue-600 transition-colors">实操结论</a>
+            <div className="hidden md:flex items-center gap-6 text-sm font-medium text-[var(--muted)]">
+              <a href="#positioning" className="hover:text-[var(--brand-deep)] transition-colors">书籍定位</a>
+              <a href="#core-proposition" className="hover:text-[var(--brand-deep)] transition-colors">核心命题</a>
+              <a href="#theme-modules" className="hover:text-[var(--brand-deep)] transition-colors">主题模块</a>
+              <a href="#conclusions" className="hover:text-[var(--brand-deep)] transition-colors">实操结论</a>
             </div>
           </div>
         </header>
 
-        <main className="max-w-5xl mx-auto px-4 py-12">
+        <main className="max-w-6xl mx-auto px-4 py-10 md:py-14">
         {/* Search Section */}
-        <section className="mb-16 text-center">
+        <section className="mb-16">
+          <div className="hero-panel px-6 py-8 md:px-10 md:py-12 lg:px-14 lg:py-14 text-center">
+          <div className="section-kicker mono-label mx-auto mb-6">AI-Native Learning Loop</div>
           <motion.h1 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="text-4xl md:text-5xl font-extrabold mb-6 tracking-tight text-gray-900"
+            className="display-title text-5xl md:text-6xl lg:text-7xl font-semibold mb-6 text-[var(--ink)]"
           >
-            极速书籍核心拆解
+            一本书到知识资产
           </motion.h1>
           <motion.p 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
-            className="text-lg text-gray-500 mb-10 max-w-2xl mx-auto"
+            className="text-lg md:text-xl text-[var(--muted)] mb-10 max-w-3xl mx-auto leading-8"
           >
-            输入书名，即刻获取高密度、专业级的核心思想与交互式内容策划方案。
+            输入一本书，生成拆书内容、NotebookLM 素材、Gemini 深聊问题与知识库沉淀记录，把阅读变成可复用的个人判断力资产。
           </motion.p>
 
           <motion.form 
@@ -1224,20 +1469,20 @@ Markdown 笔记要求：
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 0.2 }}
             onSubmit={handleGenerate}
-            className="relative max-w-2xl mx-auto"
+            className="hero-search relative max-w-3xl mx-auto rounded-[28px] p-2.5"
           >
             <input
               type="text"
               value={bookTitle}
               onChange={(e) => setBookTitle(e.target.value)}
               placeholder="输入书名，例如：《证券分析》"
-              className="w-full h-16 pl-14 pr-32 bg-white border border-gray-200 rounded-2xl shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-lg transition-all"
+              className="w-full h-16 pl-14 pr-36 bg-transparent rounded-[24px] outline-none text-lg text-[var(--ink)] placeholder:text-[var(--muted-soft)]"
             />
-            <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-400 w-6 h-6" />
+            <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-[var(--muted-soft)] w-6 h-6" />
             <button
               type="submit"
               disabled={loading || !bookTitle.trim()}
-              className="absolute right-2 top-2 bottom-2 px-6 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-2"
+              className="absolute right-2 top-2 bottom-2 px-6 bg-[var(--ink)] text-white rounded-[20px] font-semibold hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-2 shadow-[0_10px_24px_rgba(31,29,26,0.12)]"
             >
               {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Sparkles className="w-5 h-5" />}
               <span>开始拆解</span>
@@ -1249,17 +1494,17 @@ Markdown 笔记要求：
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.25 }}
-              className="mt-5 max-w-3xl mx-auto bg-emerald-50 border border-emerald-100 rounded-2xl p-4 md:p-5 text-left"
+              className="mt-5 max-w-3xl mx-auto surface-card rounded-[28px] p-4 md:p-5 text-left"
             >
               <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                 <div>
-                  <div className="inline-flex px-3 py-1 bg-emerald-100 text-emerald-700 text-xs font-bold uppercase tracking-wider rounded-full mb-2">
+                  <div className="inline-flex px-3 py-1 bg-[var(--brand-soft)] text-[var(--brand-deep)] text-xs font-bold uppercase tracking-wider rounded-full mb-2">
                     默认同步目标
                   </div>
-                  <p className="text-sm md:text-base text-emerald-900 font-semibold">
+                  <p className="text-sm md:text-base text-[var(--ink)] font-semibold">
                     本次拆书确认后，会默认写入 `James的读书分享` 知识库
                   </p>
-                  <p className="text-sm text-emerald-700 mt-1">
+                  <p className="text-sm text-[var(--muted)] mt-1">
                     系统会自动查重并直接创建或追加到 ima，同时在本地 `书本` 文件夹下按书名保存一份。
                   </p>
                 </div>
@@ -1267,25 +1512,26 @@ Markdown 笔记要求：
                   href="https://ima.qq.com/"
                   target="_blank"
                   rel="noreferrer"
-                  className="inline-flex items-center justify-center px-4 py-2 bg-white text-emerald-700 border border-emerald-200 rounded-xl font-medium hover:bg-emerald-100 transition-colors"
+                  className="inline-flex items-center justify-center px-4 py-2 bg-white text-[var(--brand-deep)] border border-[#cdebd8] rounded-full font-medium hover:bg-[var(--brand-soft)] transition-colors"
                 >
                   打开 ima 知识库
                 </a>
               </div>
             </motion.div>
           )}
+          </div>
         </section>
 
         {pendingPipelineChange && (
-          <section className="mb-12 bg-amber-50 border border-amber-100 rounded-3xl p-6 md:p-8 shadow-sm">
+          <section className="mb-12 surface-card rounded-[28px] p-6 md:p-8">
             <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4 mb-6">
               <div>
-                <div className="inline-flex items-center gap-2 px-3 py-1 bg-amber-100 text-amber-700 text-xs font-bold uppercase tracking-wider rounded-full mb-3">
+                <div className="inline-flex items-center gap-2 px-3 py-1 bg-[var(--amber-soft)] text-[#9a6700] text-xs font-bold uppercase tracking-wider rounded-full mb-3">
                   <AlertCircle className="w-3.5 h-3.5" />
                   更新前确认
                 </div>
-                <h2 className="text-2xl font-bold text-gray-900">这次准备写入读书流水线的内容</h2>
-                <p className="text-gray-600 mt-2 leading-relaxed max-w-3xl">
+                <h2 className="display-title text-2xl md:text-3xl font-semibold text-[var(--ink)]">这次准备写入读书流水线的内容</h2>
+                <p className="text-[var(--muted)] mt-2 leading-relaxed max-w-3xl">
                   系统不会直接修改数据库。先把本次准备新增或更新的字段列给你看，只有点确认后才会真正写入当前数据源。
                 </p>
               </div>
@@ -1294,7 +1540,7 @@ Markdown 笔记要求：
                   <button
                     onClick={confirmPipelineChange}
                     disabled={storageSyncing}
-                    className="px-4 py-2 bg-amber-600 text-white rounded-xl font-medium hover:bg-amber-700 transition-colors"
+                    className="px-5 py-2.5 bg-[var(--ink)] text-white rounded-full font-medium hover:opacity-90 transition-colors"
                   >
                     {storageSyncing
                       ? '正在写入...'
@@ -1308,7 +1554,7 @@ Markdown 笔记要求：
                 <button
                   onClick={cancelPipelineChange}
                   disabled={storageSyncing}
-                  className="px-4 py-2 bg-white text-amber-700 border border-amber-200 rounded-xl font-medium hover:bg-amber-100 transition-colors"
+                  className="px-5 py-2.5 bg-white text-[var(--muted)] border border-[var(--line-strong)] rounded-full font-medium hover:bg-black/[0.03] transition-colors"
                 >
                   暂不处理
                 </button>
@@ -1335,15 +1581,15 @@ Markdown 笔记要求：
             </div>
 
             {pendingPipelineChange.existing && (
-              <div className="text-sm text-gray-500 mb-4">
-                已匹配到现有记录：<span className="font-medium text-gray-800">{pendingPipelineChange.existing.title}</span>
+              <div className="text-sm text-[var(--muted)] mb-4">
+                已匹配到现有记录：<span className="font-medium text-[var(--ink)]">{pendingPipelineChange.existing.title}</span>
               </div>
             )}
 
             {pendingPipelineChange.changes.length > 0 ? (
               <div className="overflow-x-auto">
-                <table className="w-full min-w-[720px] text-sm bg-white rounded-2xl overflow-hidden">
-                  <thead className="bg-amber-50 text-amber-800">
+                <table className="w-full min-w-[720px] text-sm bg-white rounded-[24px] overflow-hidden border border-[var(--line)]">
+                  <thead className="bg-[var(--paper-strong)] text-[var(--muted)]">
                     <tr className="text-left">
                       <th className="px-4 py-3 font-semibold">字段</th>
                       <th className="px-4 py-3 font-semibold">当前值</th>
@@ -1352,17 +1598,17 @@ Markdown 笔记要求：
                   </thead>
                   <tbody>
                     {pendingPipelineChange.changes.map((change) => (
-                      <tr key={change.field} className="border-t border-gray-100">
-                        <td className="px-4 py-3 font-medium text-gray-900">{change.field}</td>
-                        <td className="px-4 py-3 text-gray-500">{change.from || '空'}</td>
-                        <td className="px-4 py-3 text-gray-900">{change.to || '空'}</td>
+                      <tr key={change.field} className="border-t border-[var(--line)]">
+                        <td className="px-4 py-3 font-medium text-[var(--ink)]">{change.field}</td>
+                        <td className="px-4 py-3 text-[var(--muted)]">{change.from || '空'}</td>
+                        <td className="px-4 py-3 text-[var(--ink)]">{change.to || '空'}</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
             ) : (
-              <div className="bg-white rounded-2xl border border-gray-100 p-5 text-gray-600">
+              <div className="bg-white rounded-[24px] border border-[var(--line)] p-5 text-[var(--muted)]">
                 规范书名匹配后，系统判断这本书已经存在且当前字段没有需要修改的内容，所以这次不会重复写入。
               </div>
             )}
@@ -1372,22 +1618,22 @@ Markdown 笔记要求：
         <section className="mb-16 space-y-6">
           <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
             <div>
-              <div className="inline-flex px-3 py-1 bg-violet-50 text-violet-600 text-xs font-bold uppercase tracking-wider rounded-full mb-3">
+              <div className="section-kicker mb-3">
                 {storageMode === 'notion'
                   ? 'Notion Reading Pipeline DB'
                   : storageMode === 'ima'
                     ? 'IMA Reading Pipeline DB'
                     : 'Local Reading Pipeline DB'}
               </div>
-              <h2 className="text-2xl md:text-3xl font-bold text-gray-900">读书流水线数据库</h2>
-              <p className="text-gray-500 mt-2 max-w-3xl leading-relaxed">
+              <h2 className="display-title text-3xl md:text-4xl font-semibold text-[var(--ink)]">读书流水线数据库</h2>
+              <p className="text-[var(--muted)] mt-2 max-w-3xl leading-relaxed">
                 现在这张表直接读取当前数据源里的真实数据。每次你完成一本书的拆解，系统会先查重，再把准备写入的字段列出来，只有你确认后才会更新数据库和页面内容。
               </p>
-              <p className="text-xs text-gray-400 mt-3 max-w-3xl leading-relaxed">
+              <p className="text-xs text-[var(--muted-soft)] mt-3 max-w-3xl leading-relaxed">
                 去重规则：按规范书名匹配，自动忽略《》、中英文标点、空格等格式差异；同一本书再次出现时只升级状态，不重复新增记录。
               </p>
             </div>
-            <div className="text-sm text-gray-400">
+            <div className="text-sm text-[var(--muted-soft)]">
               数据源：{storageLabel}
             </div>
           </div>
@@ -1395,10 +1641,10 @@ Markdown 笔记要求：
           {storageMessage && (
             <div
               className={cn(
-                "rounded-2xl border p-4 text-sm leading-relaxed",
+                "rounded-[24px] border p-4 text-sm leading-relaxed",
                 storageConfigured
-                  ? "bg-emerald-50 border-emerald-100 text-emerald-700"
-                  : "bg-amber-50 border-amber-100 text-amber-700",
+                  ? "bg-[var(--brand-soft)] border-[#caecd8] text-[var(--brand-deep)]"
+                  : "bg-[var(--amber-soft)] border-[#f2e0b7] text-[#9a6700]",
               )}
             >
               {storageMessage}
@@ -1406,24 +1652,24 @@ Markdown 笔记要求：
           )}
 
           <div className="grid md:grid-cols-3 gap-4">
-            <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
-              <div className="text-sm text-gray-500 mb-2">已查阅书目</div>
-              <div className="text-3xl font-bold text-gray-900">{reviewedCount}</div>
+            <div className="surface-card rounded-[24px] p-5">
+              <div className="mono-label text-[var(--muted-soft)] mb-2">Reviewed</div>
+              <div className="text-3xl font-semibold text-[var(--ink)]">{reviewedCount}</div>
             </div>
-            <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
-              <div className="text-sm text-gray-500 mb-2">已完成拆解</div>
-              <div className="text-3xl font-bold text-blue-600">{decodedCount}</div>
+            <div className="surface-card rounded-[24px] p-5">
+              <div className="mono-label text-[var(--muted-soft)] mb-2">Decoded</div>
+              <div className="text-3xl font-semibold text-[var(--blue)]">{decodedCount}</div>
             </div>
-            <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
-              <div className="text-sm text-gray-500 mb-2">可入库到 Vault</div>
-              <div className="text-3xl font-bold text-emerald-600">{vaultReadyCount}</div>
+            <div className="surface-card rounded-[24px] p-5">
+              <div className="mono-label text-[var(--muted-soft)] mb-2">Vault Ready</div>
+              <div className="text-3xl font-semibold text-[var(--brand-deep)]">{vaultReadyCount}</div>
             </div>
           </div>
 
-          <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
+          <div className="table-shell rounded-[28px] overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full min-w-[920px] text-sm">
-                <thead className="bg-gray-50 text-gray-500">
+                <thead className="bg-[rgba(246,244,239,0.92)] text-[var(--muted)]">
                   <tr className="text-left">
                     <th className="px-5 py-4 font-semibold">书名</th>
                     <th className="px-5 py-4 font-semibold">学科分类</th>
@@ -1436,55 +1682,55 @@ Markdown 笔记要求：
                 <tbody>
                   {databaseLoading ? (
                     <tr>
-                      <td colSpan={6} className="px-5 py-10 text-center text-gray-400">
+                      <td colSpan={6} className="px-5 py-10 text-center text-[var(--muted-soft)]">
                         正在读取 Notion 读书流水线...
                       </td>
                     </tr>
                   ) : readingDatabase.length === 0 ? (
                     <tr>
-                      <td colSpan={6} className="px-5 py-10 text-center text-gray-400">
+                      <td colSpan={6} className="px-5 py-10 text-center text-[var(--muted-soft)]">
                         暂无可展示的 Notion 记录
                       </td>
                     </tr>
                   ) : readingDatabase.map((item) => (
-                    <tr key={item.id} className="border-t border-gray-100 hover:bg-gray-50/70 transition-colors">
+                    <tr key={item.id} className="border-t border-[var(--line)] hover:bg-white/60 transition-colors">
                       <td className="px-5 py-4">
-                        <div className="font-semibold text-gray-900">{item.title}</div>
+                        <div className="font-semibold text-[var(--ink)]">{item.title}</div>
                         {storageMode === 'notion' && item.pageUrl && (
                           <a
                             href={item.pageUrl}
                             target="_blank"
                             rel="noreferrer"
-                            className="text-xs text-blue-600 hover:underline mt-1 inline-block"
+                            className="text-xs text-[var(--blue)] hover:underline mt-1 inline-block"
                           >
                             打开 Notion 页面
                           </a>
                         )}
                       </td>
-                      <td className="px-5 py-4 text-gray-600">{item.field}</td>
+                      <td className="px-5 py-4 text-[var(--muted)]">{item.field}</td>
                       <td className="px-5 py-4">
                         <span
                           className={cn(
                             "inline-flex px-2.5 py-1 rounded-full text-xs font-semibold",
                             item.notionProcess === '✅ 已完成'
-                              ? "bg-emerald-50 text-emerald-700"
+                              ? "bg-[var(--brand-soft)] text-[var(--brand-deep)]"
                               : item.notionProcess === '💡Alpha笔记'
-                                ? "bg-blue-50 text-blue-700"
+                                ? "bg-[var(--blue-soft)] text-[var(--blue)]"
                                 : item.notionProcess === '⚔️ AI对谈'
-                                  ? "bg-violet-50 text-violet-700"
-                                  : "bg-amber-50 text-amber-700",
+                                  ? "bg-[var(--violet-soft)] text-violet-700"
+                                  : "bg-[var(--amber-soft)] text-[#9a6700]",
                           )}
                         >
                           {item.notionProcess || item.status}
                         </span>
                       </td>
-                      <td className="px-5 py-4 text-gray-600 max-w-[280px] align-top">
+                      <td className="px-5 py-4 text-[var(--muted)] max-w-[280px] align-top">
                         <div className="max-h-24 overflow-hidden whitespace-pre-wrap">{item.coreQuestionNotes || '—'}</div>
                       </td>
-                      <td className="px-5 py-4 text-gray-600 max-w-[280px] align-top">
+                      <td className="px-5 py-4 text-[var(--muted)] max-w-[280px] align-top">
                         <div className="max-h-24 overflow-hidden whitespace-pre-wrap">{item.alphaNotes || '—'}</div>
                       </td>
-                      <td className="px-5 py-4 text-gray-500 whitespace-nowrap">
+                      <td className="px-5 py-4 text-[var(--muted-soft)] whitespace-nowrap">
                         {new Date(item.lastReviewedAt).toLocaleDateString()}
                       </td>
                     </tr>
@@ -1505,17 +1751,17 @@ Markdown 笔记要求：
               className="flex flex-col items-center justify-center py-20"
             >
               <div className="relative w-16 h-16 mb-6">
-                <div className="absolute inset-0 border-4 border-blue-100 rounded-full"></div>
-                <div className="absolute inset-0 border-4 border-blue-600 rounded-full border-t-transparent animate-spin"></div>
+                <div className="absolute inset-0 border-4 border-[var(--brand-soft)] rounded-full"></div>
+                <div className="absolute inset-0 border-4 border-[var(--brand)] rounded-full border-t-transparent animate-spin"></div>
               </div>
-              <p className="text-blue-600 font-medium animate-pulse">{loadingMessage}</p>
+              <p className="text-[var(--brand-deep)] font-medium animate-pulse">{loadingMessage}</p>
             </motion.div>
           )}
         </AnimatePresence>
 
         {/* Error State */}
         {error && (
-          <div className="bg-red-50 border border-red-100 text-red-600 p-4 rounded-xl text-center mb-8">
+          <div className="bg-red-50 border border-red-100 text-red-600 p-4 rounded-[22px] text-center mb-8">
             {error}
           </div>
         )}
@@ -1528,26 +1774,39 @@ Markdown 笔记要求：
             className="space-y-12"
           >
             {/* 1. Positioning */}
-            <section className="bg-white rounded-3xl p-8 md:p-12 border border-gray-100 shadow-sm">
+            <section id="positioning" className="surface-card rounded-[32px] p-8 md:p-12">
               <div className="flex items-center gap-3 mb-8">
-                <div className="px-3 py-1 bg-blue-50 text-blue-600 text-xs font-bold uppercase tracking-wider rounded-full">
+                <div className="section-kicker">
                   一、书籍定位
                 </div>
               </div>
               <div className="grid md:grid-cols-2 gap-8">
-                <div>
-                  <h2 className="text-3xl font-bold mb-4 text-gray-900">{result.positioning.title}</h2>
+                <div className="min-w-0">
+                  <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between mb-4">
+                    <h2 className="display-title text-4xl md:text-5xl font-semibold text-[var(--ink)] break-words">
+                      {result.positioning.title}
+                    </h2>
+                    <button
+                      type="button"
+                      onClick={() => copyBookContent(result)}
+                      className="inline-flex shrink-0 items-center justify-center gap-2 self-start rounded-full border border-[var(--line-strong)] bg-white px-4 py-2 text-sm font-medium text-[var(--ink)] transition-colors hover:bg-[var(--paper-strong)]"
+                      title="复制这本书的完整拆书内容"
+                    >
+                      <Copy className="w-4 h-4 text-[var(--brand-deep)]" />
+                      {copiedContentId === result.id ? '已复制' : '复制内容'}
+                    </button>
+                  </div>
                   <div className="flex flex-wrap gap-3 mb-6">
-                    <span className="px-3 py-1 bg-gray-100 text-gray-600 text-sm rounded-lg font-medium">
+                    <span className="px-3 py-1 bg-white/80 text-[var(--muted)] text-sm rounded-full font-medium border border-[var(--line)]">
                       作者：{result.positioning.author}
                     </span>
-                    <span className="px-3 py-1 bg-gray-100 text-gray-600 text-sm rounded-lg font-medium">
+                    <span className="px-3 py-1 bg-white/80 text-[var(--muted)] text-sm rounded-full font-medium border border-[var(--line)]">
                       领域：{result.positioning.field}
                     </span>
                   </div>
                 </div>
                 <div className="flex items-center">
-                  <div className="bg-gray-50 p-6 rounded-2xl border-l-4 border-blue-600 italic text-gray-700 leading-relaxed">
+                  <div className="quote-surface p-6 rounded-[24px] border-l-4 border-[var(--brand)] italic text-[var(--muted)] leading-relaxed">
                     “{result.positioning.oneLiner}”
                   </div>
                 </div>
@@ -1555,16 +1814,16 @@ Markdown 笔记要求：
             </section>
 
             {/* 2. Core Proposition */}
-            <section className="text-center py-12">
-              <div className="inline-block px-3 py-1 bg-blue-50 text-blue-600 text-xs font-bold uppercase tracking-wider rounded-full mb-6">
+            <section id="core-proposition" className="surface-card rounded-[32px] text-center py-12 px-6 md:px-10">
+              <div className="inline-block section-kicker mb-6">
                 二、核心命题
               </div>
-              <h3 className="text-4xl md:text-5xl font-black mb-8 text-gray-900 leading-tight">
+              <h3 className="display-title text-4xl md:text-5xl lg:text-6xl font-semibold mb-8 text-[var(--ink)] leading-tight">
                 {result.coreProposition.mainTitle}
               </h3>
               <div className="max-w-3xl mx-auto space-y-4">
                 {result.coreProposition.explanation.map((exp, idx) => (
-                  <p key={idx} className="text-lg text-gray-600 leading-relaxed">
+                  <p key={idx} className="text-lg text-[var(--muted)] leading-relaxed">
                     {exp}
                   </p>
                 ))}
@@ -1572,27 +1831,27 @@ Markdown 笔记要求：
             </section>
 
             {/* 3. Theme Modules */}
-            <section className="space-y-8">
+            <section id="theme-modules" className="space-y-8">
               <div className="flex items-center gap-3">
-                <div className="px-3 py-1 bg-blue-50 text-blue-600 text-xs font-bold uppercase tracking-wider rounded-full">
+                <div className="section-kicker">
                   三、主题模块
                 </div>
               </div>
               <div className="grid md:grid-cols-3 gap-6">
                 {result.modules.map((module, mIdx) => (
-                  <div key={mIdx} className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
+                  <div key={mIdx} className="surface-card-strong rounded-[28px] p-6 hover:-translate-y-0.5 transition-all">
                     <div className="flex items-center gap-2 mb-6">
-                      <div className="w-8 h-8 bg-blue-50 rounded-lg flex items-center justify-center">
-                        {mIdx === 0 ? <Target className="w-4 h-4 text-blue-600" /> : 
-                         mIdx === 1 ? <Layers className="w-4 h-4 text-blue-600" /> : 
-                         <Zap className="w-4 h-4 text-blue-600" />}
+                      <div className="w-9 h-9 bg-[var(--paper-strong)] rounded-2xl flex items-center justify-center border border-[var(--line)]">
+                        {mIdx === 0 ? <Target className="w-4 h-4 text-[var(--brand-deep)]" /> :
+                         mIdx === 1 ? <Layers className="w-4 h-4 text-[var(--brand-deep)]" /> :
+                         <Zap className="w-4 h-4 text-[var(--brand-deep)]" />}
                       </div>
-                      <h4 className="font-bold text-gray-900">{module.title}</h4>
+                      <h4 className="font-bold text-[var(--ink)]">{module.title}</h4>
                     </div>
                     <ul className="space-y-4">
                       {module.cards.map((card, cIdx) => (
-                        <li key={cIdx} className="flex gap-3 text-sm text-gray-600 leading-relaxed">
-                          <div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-blue-600 shrink-0" />
+                        <li key={cIdx} className="flex gap-3 text-sm text-[var(--muted)] leading-relaxed">
+                          <div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-[var(--brand)] shrink-0" />
                           {card}
                         </li>
                       ))}
@@ -1603,27 +1862,27 @@ Markdown 笔记要求：
             </section>
 
             {/* 4. Reading Pipeline */}
-            <section className="bg-white rounded-3xl p-8 md:p-10 border border-gray-100 shadow-sm">
+            <section className="surface-card rounded-[32px] p-8 md:p-10">
               <div className="flex items-center gap-3 mb-8">
-                <div className="px-3 py-1 bg-violet-50 text-violet-600 text-xs font-bold uppercase tracking-wider rounded-full">
+                <div className="section-kicker">
                   四、读书流水线拆书
                 </div>
               </div>
 
               <div className="grid lg:grid-cols-[1.1fr,0.9fr] gap-6 mb-6">
-                <div className="rounded-2xl bg-violet-50 border border-violet-100 p-6">
-                  <div className="text-sm font-semibold text-violet-700 mb-3">这本书真正回答的问题</div>
-                  <p className="text-xl md:text-2xl font-bold text-gray-900 leading-relaxed">
+                <div className="rounded-[26px] bg-[var(--violet-soft)] border border-[#ddd4ff] p-6">
+                  <div className="mono-label text-violet-700 mb-3">这本书真正回答的问题</div>
+                  <p className="text-xl md:text-2xl font-semibold text-[var(--ink)] leading-relaxed">
                     {result.readingPipeline.coreQuestion}
                   </p>
                 </div>
 
-                <div className="rounded-2xl bg-gray-50 border border-gray-100 p-6">
-                  <div className="text-sm font-semibold text-gray-500 mb-4">行动清单</div>
+                <div className="rounded-[26px] bg-white border border-[var(--line)] p-6">
+                  <div className="mono-label text-[var(--muted-soft)] mb-4">行动清单</div>
                   <ul className="space-y-3">
                     {result.readingPipeline.actionChecklist.map((item, idx) => (
-                      <li key={idx} className="flex gap-3 text-sm text-gray-700 leading-relaxed">
-                        <span className="w-6 h-6 rounded-full bg-violet-100 text-violet-700 text-xs font-bold flex items-center justify-center shrink-0">
+                      <li key={idx} className="flex gap-3 text-sm text-[var(--muted)] leading-relaxed">
+                        <span className="w-6 h-6 rounded-full bg-[var(--paper-strong)] text-violet-700 text-xs font-bold flex items-center justify-center shrink-0 border border-[var(--line)]">
                           {idx + 1}
                         </span>
                         <span>{item}</span>
@@ -1634,14 +1893,14 @@ Markdown 笔记要求：
               </div>
 
               <div className="grid md:grid-cols-2 xl:grid-cols-4 gap-5">
-                <div className="rounded-2xl border border-gray-100 p-5 bg-white">
-                  <h5 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
+                <div className="rounded-[24px] border border-[var(--line)] p-5 bg-white">
+                  <h5 className="font-bold text-[var(--ink)] mb-4 flex items-center gap-2">
                     <Target className="w-4 h-4 text-violet-600" />
                     关键模型
                   </h5>
                   <ul className="space-y-3">
                     {result.readingPipeline.keyModels.map((item, idx) => (
-                      <li key={idx} className="text-sm text-gray-600 leading-relaxed flex gap-3">
+                      <li key={idx} className="text-sm text-[var(--muted)] leading-relaxed flex gap-3">
                         <div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-violet-600 shrink-0" />
                         {item}
                       </li>
@@ -1649,14 +1908,14 @@ Markdown 笔记要求：
                   </ul>
                 </div>
 
-                <div className="rounded-2xl border border-gray-100 p-5 bg-white">
-                  <h5 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
+                <div className="rounded-[24px] border border-[var(--line)] p-5 bg-white">
+                  <h5 className="font-bold text-[var(--ink)] mb-4 flex items-center gap-2">
                     <BookOpen className="w-4 h-4 text-violet-600" />
                     代表性案例
                   </h5>
                   <ul className="space-y-3">
                     {result.readingPipeline.keyCases.map((item, idx) => (
-                      <li key={idx} className="text-sm text-gray-600 leading-relaxed flex gap-3">
+                      <li key={idx} className="text-sm text-[var(--muted)] leading-relaxed flex gap-3">
                         <div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-violet-600 shrink-0" />
                         {item}
                       </li>
@@ -1664,14 +1923,14 @@ Markdown 笔记要求：
                   </ul>
                 </div>
 
-                <div className="rounded-2xl border border-gray-100 p-5 bg-white">
-                  <h5 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
+                <div className="rounded-[24px] border border-[var(--line)] p-5 bg-white">
+                  <h5 className="font-bold text-[var(--ink)] mb-4 flex items-center gap-2">
                     <ArrowRight className="w-4 h-4 text-violet-600" />
                     迁移场景
                   </h5>
                   <ul className="space-y-3">
                     {result.readingPipeline.transferScenarios.map((item, idx) => (
-                      <li key={idx} className="text-sm text-gray-600 leading-relaxed flex gap-3">
+                      <li key={idx} className="text-sm text-[var(--muted)] leading-relaxed flex gap-3">
                         <div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-violet-600 shrink-0" />
                         {item}
                       </li>
@@ -1679,14 +1938,14 @@ Markdown 笔记要求：
                   </ul>
                 </div>
 
-                <div className="rounded-2xl border border-gray-100 p-5 bg-white">
-                  <h5 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
+                <div className="rounded-[24px] border border-[var(--line)] p-5 bg-white">
+                  <h5 className="font-bold text-[var(--ink)] mb-4 flex items-center gap-2">
                     <FileText className="w-4 h-4 text-violet-600" />
                     Alpha 笔记
                   </h5>
                   <ul className="space-y-3">
                     {result.readingPipeline.alphaNotes.map((item, idx) => (
-                      <li key={idx} className="text-sm text-gray-600 leading-relaxed flex gap-3">
+                      <li key={idx} className="text-sm text-[var(--muted)] leading-relaxed flex gap-3">
                         <div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-violet-600 shrink-0" />
                         {item}
                       </li>
@@ -1697,9 +1956,9 @@ Markdown 笔记要求：
             </section>
 
             {/* 5. Conclusions */}
-            <section className="bg-gray-900 rounded-3xl p-8 md:p-12 text-white">
+            <section id="conclusions" className="deep-panel rounded-[32px] p-8 md:p-12 text-white">
               <div className="flex items-center gap-3 mb-10">
-                <div className="px-3 py-1 bg-white/10 text-white/80 text-xs font-bold uppercase tracking-wider rounded-full">
+                <div className="section-kicker border-white/10 bg-white/5 text-white/70">
                   五、阅读后可直接带走的结论
                 </div>
               </div>
@@ -1712,60 +1971,101 @@ Markdown 笔记要求：
                   <ul className="space-y-4">
                     {result.conclusions.remember.map((item, idx) => (
                       <li key={idx} className="flex gap-4 p-4 bg-white/5 rounded-xl border border-white/10">
-                        <span className="text-blue-400 font-bold">0{idx + 1}</span>
-                        <span className="text-gray-300">{item}</span>
+                        <span className="text-emerald-300 font-bold">0{idx + 1}</span>
+                        <span className="text-stone-200">{item}</span>
                       </li>
                     ))}
                   </ul>
                 </div>
                 <div className="space-y-6">
                   <h5 className="text-xl font-bold flex items-center gap-2">
-                    <ArrowRight className="w-5 h-5 text-blue-400" />
+                    <ArrowRight className="w-5 h-5 text-emerald-300" />
                     现实中如何应用
                   </h5>
-                  <div className="p-6 bg-blue-600 rounded-2xl font-medium leading-relaxed shadow-lg shadow-blue-900/20">
+                  <div className="p-6 bg-white/8 rounded-[24px] font-medium leading-relaxed border border-white/10">
                     {result.conclusions.practicalUse}
                   </div>
                 </div>
               </div>
             </section>
 
-            {/* 6. Display Suggestions */}
-            <section className="bg-blue-50 rounded-2xl p-8 border border-blue-100">
-              <div className="flex items-center gap-3 mb-6">
-                <MousePointer2 className="w-5 h-5 text-blue-600" />
-                <h5 className="font-bold text-blue-900">页面展示建议</h5>
+            {/* 6. Feynman Explanation */}
+            <section className="surface-card rounded-[32px] p-8 md:p-10">
+              <div className="flex items-center gap-3 mb-8">
+                <div className="section-kicker">
+                  六、费曼学习解释
+                </div>
               </div>
-              <p className="text-blue-800 leading-relaxed">
+              <div className="rounded-[26px] bg-white border border-[var(--line)] p-6 mb-6">
+                <div className="mono-label text-[var(--muted-soft)] mb-4">作者和时代背景</div>
+                <div className="space-y-4">
+                  {result.feynmanExplanation.authorContext.map((item, idx) => (
+                    <p key={idx} className="text-[var(--muted)] leading-7">
+                      {item}
+                    </p>
+                  ))}
+                </div>
+              </div>
+              <div className="rounded-[26px] bg-[var(--paper-strong)] border border-[var(--line)] p-6">
+                <h5 className="font-bold text-[var(--ink)] mb-4 flex items-center gap-2">
+                  <FileText className="w-4 h-4 text-[var(--brand-deep)]" />
+                  用大白话讲给一个没读过这本书的朋友听
+                </h5>
+                <div className="grid md:grid-cols-2 gap-4">
+                  {result.feynmanExplanation.explanationAngles.map((angle, idx) => (
+                    <article key={idx} className="rounded-[20px] bg-white border border-[var(--line)] p-5">
+                      <h6 className="font-semibold text-[var(--ink)] mb-3">{angle.title}</h6>
+                      <p className="text-sm text-[var(--muted)] leading-relaxed">
+                        {angle.explanation}
+                      </p>
+                    </article>
+                  ))}
+                </div>
+              </div>
+              <div className="mt-6 rounded-[26px] quote-surface p-6 border-l-4 border-[var(--brand)]">
+                <div className="mono-label text-[var(--brand-deep)] mb-3">一句话总结</div>
+                <p className="text-lg font-semibold text-[var(--ink)] leading-8">
+                  {result.feynmanExplanation.oneSentenceSummary}
+                </p>
+              </div>
+            </section>
+
+            {/* 6. Display Suggestions */}
+            <section className="surface-card rounded-[28px] p-8">
+              <div className="flex items-center gap-3 mb-6">
+                <MousePointer2 className="w-5 h-5 text-[var(--blue)]" />
+                <h5 className="font-bold text-[var(--ink)]">页面展示建议</h5>
+              </div>
+              <p className="text-[var(--muted)] leading-relaxed">
                 {result.displaySuggestions}
               </p>
             </section>
 
             {/* 7. Obsidian Vault Pipeline */}
-            <section className="bg-emerald-50 rounded-3xl p-8 md:p-10 border border-emerald-100">
+            <section className="surface-card rounded-[32px] p-8 md:p-10">
               <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
                 <div>
                   <div className="flex items-center gap-3 mb-3">
-                    <div className="px-3 py-1 bg-emerald-100 text-emerald-700 text-xs font-bold uppercase tracking-wider rounded-full">
+                    <div className="section-kicker bg-[var(--brand-soft)] text-[var(--brand-deep)] border-[#cdebd8]">
                       七、Obsidian Vault Pipeline
                     </div>
                   </div>
-                  <h5 className="text-2xl font-bold text-emerald-950">把书籍拆解结果直接沉淀进知识库</h5>
-                  <p className="text-emerald-800/80 mt-2 leading-relaxed">
+                  <h5 className="display-title text-3xl font-semibold text-[var(--ink)]">把书籍拆解结果直接沉淀进知识库</h5>
+                  <p className="text-[var(--muted)] mt-2 leading-relaxed">
                     参考 Obsidian Vault Pipeline 的“解读 → 提炼 → 索引”思路，下面是可直接进入 vault 的结构化输出。
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-3">
                   <button
                     onClick={() => copyToClipboard(result.obsidianPipeline.noteMarkdown)}
-                    className="px-4 py-2 bg-white text-emerald-700 border border-emerald-200 rounded-xl font-medium hover:bg-emerald-100 transition-colors flex items-center gap-2"
+                    className="px-4 py-2 bg-white text-[var(--brand-deep)] border border-[#cdebd8] rounded-full font-medium hover:bg-[var(--brand-soft)] transition-colors flex items-center gap-2"
                   >
                     <Copy className="w-4 h-4" />
                     复制 Markdown
                   </button>
                   <button
                     onClick={() => downloadMarkdown(result)}
-                    className="px-4 py-2 bg-emerald-600 text-white rounded-xl font-medium hover:bg-emerald-700 transition-colors flex items-center gap-2"
+                    className="px-4 py-2 bg-[var(--ink)] text-white rounded-full font-medium hover:opacity-90 transition-colors flex items-center gap-2"
                   >
                     <Download className="w-4 h-4" />
                     下载笔记
@@ -1774,47 +2074,47 @@ Markdown 笔记要求：
               </div>
 
               <div className="grid lg:grid-cols-[0.9fr,1.1fr] gap-6 mb-6">
-                <div className="bg-white rounded-2xl border border-emerald-100 p-6">
-                  <h6 className="font-bold text-emerald-950 flex items-center gap-2 mb-4">
-                    <Network className="w-4 h-4 text-emerald-600" />
+                <div className="bg-white rounded-[24px] border border-[#cdebd8] p-6">
+                  <h6 className="font-bold text-[var(--ink)] flex items-center gap-2 mb-4">
+                    <Network className="w-4 h-4 text-[var(--brand-deep)]" />
                     Vault 落点建议
                   </h6>
-                  <div className="space-y-3 text-sm text-emerald-950">
+                  <div className="space-y-3 text-sm text-[var(--ink)]">
                     <div className="flex justify-between gap-4">
-                      <span className="text-emerald-700">Area</span>
+                      <span className="text-[var(--muted)]">Area</span>
                       <span className="font-medium text-right">{result.obsidianPipeline.vaultPlacement.area}</span>
                     </div>
                     <div className="flex justify-between gap-4">
-                      <span className="text-emerald-700">MOC</span>
+                      <span className="text-[var(--muted)]">MOC</span>
                       <span className="font-medium text-right">{result.obsidianPipeline.vaultPlacement.moc}</span>
                     </div>
                     <div className="flex justify-between gap-4">
-                      <span className="text-emerald-700">文件名</span>
+                      <span className="text-[var(--muted)]">文件名</span>
                       <span className="font-medium text-right break-all">{result.obsidianPipeline.vaultPlacement.filename}</span>
                     </div>
                   </div>
                   <div className="flex flex-wrap gap-2 mt-5">
                     {result.obsidianPipeline.vaultPlacement.tags.map((tag, idx) => (
-                      <span key={idx} className="px-3 py-1 bg-emerald-100 text-emerald-700 rounded-lg text-xs font-medium">
+                      <span key={idx} className="px-3 py-1 bg-[var(--brand-soft)] text-[var(--brand-deep)] rounded-full text-xs font-medium">
                         #{tag}
                       </span>
                     ))}
                   </div>
                 </div>
 
-                <div className="bg-white rounded-2xl border border-emerald-100 p-6">
-                  <h6 className="font-bold text-emerald-950 flex items-center gap-2 mb-4">
-                    <BookOpen className="w-4 h-4 text-emerald-600" />
+                <div className="bg-white rounded-[24px] border border-[#cdebd8] p-6">
+                  <h6 className="font-bold text-[var(--ink)] flex items-center gap-2 mb-4">
+                    <BookOpen className="w-4 h-4 text-[var(--brand-deep)]" />
                     Evergreen 候选概念
                   </h6>
                   <div className="space-y-4">
                     {result.obsidianPipeline.evergreenCandidates.map((candidate, idx) => (
-                      <div key={idx} className="p-4 rounded-xl bg-emerald-50 border border-emerald-100">
-                        <div className="font-semibold text-emerald-950 mb-2">{candidate.concept}</div>
-                        <p className="text-sm text-emerald-900/80 leading-relaxed mb-3">{candidate.definition}</p>
+                      <div key={idx} className="p-4 rounded-[20px] bg-[var(--brand-soft)] border border-[#d8efe1]">
+                        <div className="font-semibold text-[var(--ink)] mb-2">{candidate.concept}</div>
+                        <p className="text-sm text-[var(--muted)] leading-relaxed mb-3">{candidate.definition}</p>
                         <div className="flex flex-wrap gap-2">
                           {candidate.links.map((link, linkIdx) => (
-                            <span key={linkIdx} className="px-2.5 py-1 bg-white border border-emerald-200 rounded-lg text-xs text-emerald-700">
+                            <span key={linkIdx} className="px-2.5 py-1 bg-white border border-[#cdebd8] rounded-full text-xs text-[var(--brand-deep)]">
                               {link}
                             </span>
                           ))}
@@ -1825,9 +2125,9 @@ Markdown 笔记要求：
                 </div>
               </div>
 
-              <div className="bg-[#0F172A] rounded-2xl p-6 border border-slate-800">
+              <div className="markdown-panel rounded-[24px] p-6">
                 <h6 className="font-bold text-white flex items-center gap-2 mb-4">
-                  <FileText className="w-4 h-4 text-emerald-400" />
+                  <FileText className="w-4 h-4 text-emerald-300" />
                   可直接保存的 Obsidian Markdown
                 </h6>
                 <pre className="text-sm leading-7 text-slate-200 whitespace-pre-wrap break-words overflow-x-auto">
@@ -1837,11 +2137,11 @@ Markdown 笔记要求：
             </section>
 
             {/* Footer CTA */}
-            <footer className="text-center py-12 border-t border-gray-100">
-              <p className="text-gray-400 text-sm mb-4">由 BookMind AI 深度提炼</p>
+            <footer className="text-center py-12 section-divider">
+              <p className="text-[var(--muted-soft)] text-sm mb-4">由 James Reading OS AI 深度提炼</p>
               <button 
                 onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-                className="text-blue-600 font-semibold hover:underline"
+                className="text-[var(--blue)] font-semibold hover:underline"
               >
                 拆解下一本书
               </button>

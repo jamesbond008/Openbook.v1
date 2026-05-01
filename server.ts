@@ -45,6 +45,17 @@ type BookData = {
     remember: string[];
     practicalUse: string;
   };
+  feynmanExplanation?: {
+    authorContext?: string[];
+    explanationAngles?: Array<{
+      title: string;
+      explanation: string;
+    }>;
+    oneSentenceSummary?: string;
+    plainLanguage?: string;
+    analogy?: string;
+    teachBack?: string[];
+  };
   readingPipeline: {
     coreQuestion: string;
     keyModels: string[];
@@ -60,6 +71,65 @@ type BookData = {
     noteMarkdown?: string;
   };
 };
+
+function getFeynmanExplanation(book: BookData) {
+  const fallback = {
+    authorContext: [
+      `《${book.positioning.title}》需要放回作者的问题意识里理解：作者不是凭空写作，而是在回应自己所处时代里某个真实的困惑、冲突或低效做法。`,
+      '读这本书时，先不要急着背结论，而要先问：作者看见了什么问题，为什么他觉得原来的解释不够好。',
+    ],
+    explanationAngles: [
+      {
+        title: '这本书到底在解决什么问题',
+        explanation: `用大白话讲，《${book.positioning.title}》想帮你把一个原本模糊的问题看清楚：哪些判断是错的，哪些做法只是习惯，哪些地方可以换一种思路。`,
+      },
+      {
+        title: '它为什么不是普通总结',
+        explanation: '这本书真正有价值的地方，不是多给你一些信息，而是提供一套能反复调用的观察方式，让你在现实问题里也能重新判断。',
+      },
+      {
+        title: '读完后跟你有什么关系',
+        explanation: '如果你能把书里的核心观点讲给别人听，并能说明它适合用在哪些场景、不适合用在哪些场景，这本书才算真的被你吸收。',
+      },
+    ],
+    oneSentenceSummary: `作者写《${book.positioning.title}》是想告诉你：真正重要的不是记住书里的每个细节，而是把它变成一种能解释问题、指导行动的思考方式。`,
+  };
+
+  const value = book.feynmanExplanation;
+  if (!value) return fallback;
+
+  const legacyAngles = [
+    value.plainLanguage
+      ? {
+          title: '这本书到底在讲什么',
+          explanation: value.plainLanguage,
+        }
+      : null,
+    value.analogy
+      ? {
+          title: '可以怎样类比理解',
+          explanation: value.analogy,
+        }
+      : null,
+    value.teachBack?.length
+      ? {
+          title: '讲给别人听时要抓住什么',
+          explanation: value.teachBack.join(' '),
+        }
+      : null,
+  ].filter(Boolean) as typeof fallback.explanationAngles;
+
+  return {
+    authorContext: value.authorContext?.length ? value.authorContext : fallback.authorContext,
+    explanationAngles:
+      value.explanationAngles?.length
+        ? value.explanationAngles
+        : legacyAngles.length
+          ? legacyAngles
+          : fallback.explanationAngles,
+    oneSentenceSummary: value.oneSentenceSummary || fallback.oneSentenceSummary,
+  };
+}
 
 type ReadingPipelineRecord = {
   id: string;
@@ -272,6 +342,8 @@ function buildAlphaNotes(book: BookData) {
 }
 
 function buildImaMarkdown(book: BookData) {
+  const feynman = getFeynmanExplanation(book);
+
   return [
     `# ${book.positioning.title}`,
     '',
@@ -317,9 +389,24 @@ function buildImaMarkdown(book: BookData) {
     '',
     book.conclusions.practicalUse,
     '',
+    '## 费曼学习解释',
+    '',
+    '### 作者和时代背景',
+    ...feynman.authorContext.map((item) => `- ${item}`),
+    '',
+    '### 用大白话讲给一个没读过这本书的朋友听',
+    ...feynman.explanationAngles.flatMap((angle) => [
+      '',
+      `#### ${angle.title}`,
+      angle.explanation,
+    ]),
+    '',
+    '### 一句话总结',
+    `**${feynman.oneSentenceSummary}**`,
+    '',
     '## 生成信息',
     `- 生成时间：${new Date().toLocaleString('zh-CN', {hour12: false})}`,
-    `- 输出来源：BookMind`,
+    `- 输出来源：James Reading OS`,
   ].join('\n');
 }
 
@@ -349,6 +436,7 @@ function createCandidateFromBook(book: BookData): ReadingPipelineRecord {
 function normalizeHistoryBook(book: BookData): BookData {
   return {
     ...book,
+    feynmanExplanation: book.feynmanExplanation || getFeynmanExplanation(book),
     id: book.id || crypto.randomUUID(),
     timestamp: book.timestamp || Date.now(),
   };
@@ -478,6 +566,7 @@ async function saveBookToLibrary(book: BookData) {
   const normalized = normalizeHistoryBook(book);
   const folderName = sanitizeFolderName(normalized.positioning?.title || '未命名书籍');
   const targetDir = path.join(BOOK_LIBRARY_DIR, folderName);
+  const feynman = getFeynmanExplanation(normalized);
 
   await fs.mkdir(targetDir, {recursive: true});
 
@@ -493,11 +582,35 @@ async function saveBookToLibrary(book: BookData) {
     `一句话：${normalized.positioning.oneLiner}`,
     '',
     `核心问题：${normalized.readingPipeline.coreQuestion}`,
+    '',
+    `费曼解释：${feynman.oneSentenceSummary}`,
   ].join('\n');
+
+  const markdown = normalized.obsidianPipeline?.noteMarkdown || buildImaMarkdown(normalized);
+  const markdownWithFeynman = markdown.includes('费曼学习解释')
+    ? markdown
+    : [
+        markdown,
+        '',
+        '## 费曼学习解释',
+        '',
+        '### 作者和时代背景',
+        ...feynman.authorContext.map((item) => `- ${item}`),
+        '',
+        '### 用大白话讲给一个没读过这本书的朋友听',
+        ...feynman.explanationAngles.flatMap((angle) => [
+          '',
+          `#### ${angle.title}`,
+          angle.explanation,
+        ]),
+        '',
+        '### 一句话总结',
+        `**${feynman.oneSentenceSummary}**`,
+      ].join('\n');
 
   await Promise.all([
     fs.writeFile(bookJsonPath, JSON.stringify(normalized, null, 2), 'utf8'),
-    fs.writeFile(markdownPath, normalized.obsidianPipeline?.noteMarkdown || buildImaMarkdown(normalized), 'utf8'),
+    fs.writeFile(markdownPath, markdownWithFeynman, 'utf8'),
     fs.writeFile(summaryPath, summary, 'utf8'),
   ]);
 
@@ -513,9 +626,11 @@ async function syncLocalBook(book: BookData) {
   const preview = buildPendingPipelineChange(db.records, candidate);
 
   if (preview.action === 'noop' && preview.existing) {
+    const localFolder = await saveBookToLibrary(book);
     return {
       preview,
       syncedRecord: preview.existing,
+      localFolder,
     };
   }
 
@@ -550,9 +665,12 @@ async function syncLocalBook(book: BookData) {
     snapshots: nextSnapshots,
   });
 
+  const localFolder = await saveBookToLibrary(book);
+
   return {
     preview,
     syncedRecord: nextRecord,
+    localFolder,
   };
 }
 
@@ -680,9 +798,11 @@ async function syncImaBook(book: BookData) {
   const {preview, remoteExisting, localDb} = await previewImaBook(book);
 
   if (preview.action === 'noop' && preview.existing) {
+    const localFolder = await saveBookToLibrary(book);
     return {
       preview,
       syncedRecord: preview.existing,
+      localFolder,
     };
   }
 
@@ -736,9 +856,12 @@ async function syncImaBook(book: BookData) {
     snapshots: nextSnapshots,
   });
 
+  const localFolder = await saveBookToLibrary(book);
+
   return {
     preview,
     syncedRecord: nextRecord,
+    localFolder,
   };
 }
 
@@ -811,6 +934,8 @@ function createBullets(items: string[]) {
 }
 
 function buildBookBreakdownBlocks(book: BookData) {
+  const feynman = getFeynmanExplanation(book);
+
   return [
     createHeading(1, book.positioning.title),
     ...createParagraph(`${book.positioning.author} / ${book.positioning.field}`),
@@ -839,6 +964,16 @@ function buildBookBreakdownBlocks(book: BookData) {
     createHeading(2, '阅读后可直接带走的结论'),
     ...createBullets(book.conclusions.remember),
     ...createParagraph(book.conclusions.practicalUse),
+    createHeading(2, '费曼学习解释'),
+    createHeading(3, '作者和时代背景'),
+    ...feynman.authorContext.flatMap((item) => createParagraph(item)),
+    createHeading(3, '用大白话讲给一个没读过这本书的朋友听'),
+    ...feynman.explanationAngles.flatMap((angle) => [
+      createHeading(3, angle.title),
+      ...createParagraph(angle.explanation),
+    ]),
+    createHeading(3, '一句话总结'),
+    ...createParagraph(feynman.oneSentenceSummary),
     createHeading(2, '本次同步'),
     ...createParagraph(`同步时间：${new Date().toLocaleString('zh-CN', {hour12: false})}`),
   ];
@@ -932,9 +1067,11 @@ async function upsertBookIntoNotion(book: BookData) {
   const preview = buildPendingPipelineChange(existingRecords, candidate);
 
   if (preview.action === 'noop' && preview.existing) {
+    const localFolder = await saveBookToLibrary(book);
     return {
       preview,
       syncedRecord: preview.existing,
+      localFolder,
     };
   }
 
@@ -952,8 +1089,9 @@ async function upsertBookIntoNotion(book: BookData) {
     const syncedRecord =
       refreshedPages.map(mapNotionPageToRecord).find((item) => item.id === preview.existing?.id) ||
       preview.candidate;
+    const localFolder = await saveBookToLibrary(book);
 
-    return {preview, syncedRecord};
+    return {preview, syncedRecord, localFolder};
   }
 
   const createdPage = await notionFetch('/pages', {
@@ -970,6 +1108,7 @@ async function upsertBookIntoNotion(book: BookData) {
   return {
     preview,
     syncedRecord: mapNotionPageToRecord(createdPage),
+    localFolder: await saveBookToLibrary(book),
   };
 }
 
@@ -1258,5 +1397,5 @@ app.post('/api/sync-book', async (req, res) => {
 
 app.listen(PORT, () => {
   const mode = useImaStorageMode() ? 'ima' : useLocalStorageMode() ? 'local' : 'notion';
-  console.log(`BookMind storage bridge listening on http://127.0.0.1:${PORT} (mode=${mode})`);
+  console.log(`James Reading OS storage bridge listening on http://127.0.0.1:${PORT} (mode=${mode})`);
 });

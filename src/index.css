@@ -1,1 +1,183 @@
 @import "tailwindcss";
+
+:root {
+  --paper: #fcfbf8;
+  --paper-strong: #f6f4ef;
+  --card: rgba(255, 255, 255, 0.82);
+  --card-strong: #ffffff;
+  --ink: #1f1d1a;
+  --muted: #6f6a63;
+  --muted-soft: #9d968c;
+  --line: rgba(31, 29, 26, 0.08);
+  --line-strong: rgba(31, 29, 26, 0.12);
+  --brand: #18b46a;
+  --brand-deep: #128452;
+  --brand-soft: #e6f7ee;
+  --blue: #0d74ce;
+  --blue-soft: #eff7ff;
+  --violet-soft: #f4efff;
+  --amber-soft: #fff6df;
+  --shadow-soft: 0 2px 6px rgba(19, 18, 16, 0.03), 0 18px 40px rgba(19, 18, 16, 0.05);
+  --shadow-deep: 0 10px 30px rgba(19, 18, 16, 0.06), 0 30px 80px rgba(19, 18, 16, 0.08);
+  --font-display: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif;
+  --font-mono: "SFMono-Regular", "SF Mono", "IBM Plex Mono", "Menlo", monospace;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  background:
+    radial-gradient(circle at top left, rgba(24, 180, 106, 0.13), transparent 28%),
+    radial-gradient(circle at top right, rgba(13, 116, 206, 0.1), transparent 24%),
+    linear-gradient(180deg, #fffcf7 0%, var(--paper) 38%, #f8f6f1 100%);
+  color: var(--ink);
+  font-family: Inter, "Noto Sans SC", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+a {
+  color: inherit;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+.bookmind-shell {
+  position: relative;
+  isolation: isolate;
+}
+
+.page-backdrop {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: -1;
+  background:
+    radial-gradient(circle at 10% 10%, rgba(24, 180, 106, 0.08), transparent 20%),
+    radial-gradient(circle at 90% 0%, rgba(13, 116, 206, 0.08), transparent 22%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.52), transparent 22%);
+}
+
+.glass-sidebar {
+  background: rgba(255, 255, 255, 0.78);
+  backdrop-filter: blur(18px);
+  border-right: 1px solid var(--line);
+}
+
+.topbar-glass {
+  background: rgba(252, 251, 248, 0.76);
+  backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--line);
+}
+
+.hero-panel {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 32px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(255, 255, 255, 0.86)),
+    radial-gradient(circle at top left, rgba(24, 180, 106, 0.08), transparent 28%),
+    radial-gradient(circle at top right, rgba(13, 116, 206, 0.08), transparent 26%);
+  box-shadow: var(--shadow-deep);
+}
+
+.hero-panel::after {
+  content: "";
+  position: absolute;
+  inset: auto -10% -25% auto;
+  width: 280px;
+  height: 280px;
+  border-radius: 999px;
+  background: radial-gradient(circle, rgba(24, 180, 106, 0.12), transparent 65%);
+  pointer-events: none;
+}
+
+.surface-card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow-soft);
+  backdrop-filter: blur(14px);
+}
+
+.surface-card-strong {
+  background: var(--card-strong);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow-soft);
+}
+
+.section-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0.75rem;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.76);
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.mono-label {
+  font-family: var(--font-mono);
+  font-size: 0.73rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.display-title {
+  font-family: var(--font-display);
+  letter-spacing: -0.04em;
+}
+
+.hero-search {
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(31, 29, 26, 0.1);
+  box-shadow: 0 10px 30px rgba(19, 18, 16, 0.06);
+}
+
+.table-shell {
+  background: rgba(255, 255, 255, 0.88);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow-soft);
+}
+
+.section-divider {
+  border-top: 1px solid var(--line);
+}
+
+.soft-grid {
+  background-image:
+    linear-gradient(rgba(31, 29, 26, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(31, 29, 26, 0.04) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+.deep-panel {
+  background:
+    radial-gradient(circle at top left, rgba(24, 180, 106, 0.16), transparent 22%),
+    linear-gradient(180deg, #1f2421 0%, #141816 100%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 24px 80px rgba(20, 24, 22, 0.28);
+}
+
+.quote-surface {
+  background:
+    linear-gradient(180deg, rgba(24, 180, 106, 0.08), rgba(13, 116, 206, 0.04)),
+    rgba(255, 255, 255, 0.75);
+  border: 1px solid rgba(31, 29, 26, 0.08);
+}
+
+.markdown-panel {
+  background: #101817;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+}
